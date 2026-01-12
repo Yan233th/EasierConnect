@@ -4,7 +4,6 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
-	"log"
 	"net"
 	"os"
 	"runtime/debug"
@@ -42,7 +41,7 @@ func TLSConn(server string) (*tls.UConn, error) {
 }
 
 func QueryIp(server string, token *[48]byte) ([]byte, *tls.UConn, error) {
-	log.Printf("[VPN] Connecting to %s...", server)
+	Log("[VPN]", "Connecting to %s...", server)
 
 	conn, err := TLSConn(server)
 	if err != nil {
@@ -51,8 +50,8 @@ func QueryIp(server string, token *[48]byte) ([]byte, *tls.UConn, error) {
 	}
 	// Query IP conn CAN NOT be closed, otherwise tx/rx handshake will fail
 
-	log.Printf("[VPN] TLS handshake successful")
-	log.Printf("[VPN] Querying IP address...")
+	LogSuccess("[VPN]", "✓ TLS handshake successful")
+	Log("[VPN]", "Querying IP address...")
 
 	// QUERY IP PACKET
 	message := []byte{0x00, 0x00, 0x00, 0x00}
@@ -108,7 +107,7 @@ func BlockRXStream(server string, token *[48]byte, ipRev *[4]byte, ep *EasyConne
 		return errors.New("unexpected recv handshake reply")
 	}
 
-	log.Printf("[VPN] RX handshake successful")
+	LogSuccess("[VPN]", "✓ RX handshake successful")
 
 	for {
 		n, err := conn.Read(reply)
@@ -120,7 +119,7 @@ func BlockRXStream(server string, token *[48]byte, ipRev *[4]byte, ep *EasyConne
 		ep.WriteTo(reply[:n])
 
 		if debugDump {
-			log.Printf("[VPN] RX: %d bytes", n)
+			Log("[VPN]", "RX: %d bytes", n)
 			DumpHex(reply[:n])
 		}
 	}
@@ -154,7 +153,7 @@ func BlockTXStream(server string, token *[48]byte, ipRev *[4]byte, ep *EasyConne
 		return errors.New("unexpected send handshake reply")
 	}
 
-	log.Printf("[VPN] TX handshake successful")
+	LogSuccess("[VPN]", "✓ TX handshake successful")
 
 	errCh := make(chan error)
 
@@ -166,7 +165,7 @@ func BlockTXStream(server string, token *[48]byte, ipRev *[4]byte, ep *EasyConne
 		}
 
 		if debugDump {
-			log.Printf("[VPN] TX: %d bytes", n)
+			Log("[VPN]", "TX: %d bytes", n)
 			DumpHex([]byte(buf[:n]))
 		}
 	}
@@ -180,7 +179,7 @@ func StartProtocol(endpoint *EasyConnectEndpoint, server string, token *[48]byte
 		for counter < 5 {
 			err := BlockRXStream(server, token, ipRev, endpoint, debugDump)
 			if err != nil {
-				log.Printf("[WARN] RX stream error, retrying (%d/5): %s", counter+1, err.Error())
+				LogWarn("RX stream error, retrying (%d/5): %s", counter+1, err.Error())
 			}
 			counter += 1
 		}
@@ -194,7 +193,7 @@ func StartProtocol(endpoint *EasyConnectEndpoint, server string, token *[48]byte
 		for counter < 5 {
 			err := BlockTXStream(server, token, ipRev, endpoint, debugDump)
 			if err != nil {
-				log.Printf("[WARN] TX stream error, retrying (%d/5): %s", counter+1, err.Error())
+				LogWarn("TX stream error, retrying (%d/5): %s", counter+1, err.Error())
 			}
 			counter += 1
 		}
@@ -203,5 +202,5 @@ func StartProtocol(endpoint *EasyConnectEndpoint, server string, token *[48]byte
 
 	go TX()
 
-	log.Printf("[VPN] ✓ Tunnel established")
+	LogSuccess("[VPN]", "✓ Tunnel established")
 }

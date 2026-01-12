@@ -7,7 +7,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"io"
-	"log"
 	"math/big"
 	"net"
 	"net/http"
@@ -32,7 +31,7 @@ func WebLogin(server string, username string, password string) (string, error) {
 		}}
 
 	addr := server + "/por/login_auth.csp?apiversion=1"
-	log.Printf("[LOGIN] Connecting to %s...", server[8:]) // strip "https://"
+	Log("[LOGIN]", "Connecting to %s...", server[8:]) // strip "https://"
 
 	resp, err := c.Get(addr)
 	if err != nil {
@@ -46,7 +45,7 @@ func WebLogin(server string, username string, password string) (string, error) {
 	n, _ := resp.Body.Read(buf)
 
 	twfId := string(regexp.MustCompile(`<TwfID>(.*)</TwfID>`).FindSubmatch(buf[:n])[1])
-	log.Printf("[LOGIN] Got session: %s", twfId)
+	Log("[LOGIN]", "Got session: %s", twfId)
 
 	rsaKey := string(regexp.MustCompile(`<RSA_ENCRYPT_KEY>(.*)</RSA_ENCRYPT_KEY>`).FindSubmatch(buf[:n])[1])
 
@@ -55,7 +54,7 @@ func WebLogin(server string, username string, password string) (string, error) {
 	if rsaExpMatch != nil {
 		rsaExp = string(rsaExpMatch[1])
 	} else {
-		log.Printf("[WARN] No RSA_ENCRYPT_EXP found, using default 65537")
+		LogWarn("No RSA_ENCRYPT_EXP found, using default 65537")
 		rsaExp = "65537"
 	}
 
@@ -65,10 +64,10 @@ func WebLogin(server string, username string, password string) (string, error) {
 		csrfCode = string(csrfMatch[1])
 		password += "_" + csrfCode
 	} else {
-		log.Printf("[WARN] No CSRF code found, maybe connecting to an older server")
+		LogWarn("No CSRF code found, maybe connecting to an older server")
 	}
 
-	log.Printf("[LOGIN] Encrypting credentials...")
+	Log("[LOGIN]", "Encrypting credentials...")
 
 	pubKey := rsa.PublicKey{}
 	pubKey.E, _ = strconv.Atoi(rsaExp)
@@ -84,7 +83,7 @@ func WebLogin(server string, username string, password string) (string, error) {
 	encryptedPasswordHex := hex.EncodeToString(encryptedPassword)
 
 	addr = server + "/por/login_psw.csp?anti_replay=1&encrypt=1&type=cs"
-	log.Printf("[LOGIN] Authenticating user...")
+	Log("[LOGIN]", "Authenticating user...")
 
 	form := url.Values{
 		"svpn_rand_code":    {""},
@@ -108,7 +107,7 @@ func WebLogin(server string, username string, password string) (string, error) {
 
 	// SMS Code Process
 	if strings.Contains(string(buf[:n]), "<NextService>auth/sms</NextService>") || strings.Contains(string(buf[:n]), "<NextAuth>2</NextAuth>") {
-		log.Print("[LOGIN] SMS code required")
+		Log("[LOGIN]", "SMS code required")
 
 		addr = server + "/por/login_sms.csp?apiversion=1"
 		req, err = http.NewRequest("POST", addr, nil)
@@ -128,14 +127,14 @@ func WebLogin(server string, username string, password string) (string, error) {
 			return "", errors.New("unexpected sms resp: " + string(buf[:n]))
 		}
 
-		log.Printf("[LOGIN] SMS code sent, waiting for input...")
+		Log("[LOGIN]", "SMS code sent, waiting for input...")
 
 		return twfId, ERR_NEXT_AUTH_SMS
 	}
 
 	// TOTP Authentication Process
 	if strings.Contains(string(buf[:n]), "<NextService>auth/token</NextService>") || strings.Contains(string(buf[:n]), "<NextServiceSubType>totp</NextServiceSubType>") {
-		log.Print("[LOGIN] TOTP authentication required")
+		Log("[LOGIN]", "TOTP authentication required")
 		return twfId, ERR_NEXT_AUTH_TOTP
 	}
 
@@ -156,7 +155,7 @@ func WebLogin(server string, username string, password string) (string, error) {
 		twfId = string(twfIdMatch[1])
 	}
 
-	log.Printf("[LOGIN] ✓ Authentication successful")
+	LogSuccess("[LOGIN]", "✓ Authentication successful")
 
 	return twfId, nil
 }
@@ -170,7 +169,7 @@ func AuthSms(server string, username string, password string, twfId string, smsC
 	buf := make([]byte, 40960)
 
 	addr := "https://" + server + "/por/login_sms1.csp?apiversion=1"
-	log.Printf("[LOGIN] Verifying SMS code...")
+	Log("[LOGIN]", "Verifying SMS code...")
 	form := url.Values{
 		"svpn_inputsms": {smsCode},
 	}
@@ -193,7 +192,7 @@ func AuthSms(server string, username string, password string, twfId string, smsC
 	}
 
 	twfId = string(regexp.MustCompile(`<TwfID>(.*)</TwfID>`).FindSubmatch(buf[:n])[1])
-	log.Print("[LOGIN] ✓ SMS verification successful")
+	LogSuccess("[LOGIN]", "✓ SMS verification successful")
 
 	return twfId, nil
 }
@@ -207,7 +206,7 @@ func TOTPAuth(server string, username string, password string, twfId string, TOT
 	buf := make([]byte, 40960)
 
 	addr := "https://" + server + "/por/login_token.csp"
-	log.Printf("[LOGIN] Verifying TOTP code...")
+	Log("[LOGIN]", "Verifying TOTP code...")
 	form := url.Values{
 		"svpn_inputtoken": {TOTPCode},
 	}
@@ -230,13 +229,13 @@ func TOTPAuth(server string, username string, password string, twfId string, TOT
 	}
 
 	twfId = string(regexp.MustCompile(`<TwfID>(.*)</TwfID>`).FindSubmatch(buf[:n])[1])
-	log.Print("[LOGIN] ✓ TOTP verification successful")
+	LogSuccess("[LOGIN]", "✓ TOTP verification successful")
 
 	return twfId, nil
 }
 
 func ECAgentToken(server string, twfId string) (string, error) {
-	log.Printf("[AGENT] Fetching ECAgent token...")
+	Log("[AGENT]", "Fetching ECAgent token...")
 
 	dialConn, err := net.Dial("tcp", server)
 	if err != nil {
@@ -270,7 +269,7 @@ func ECAgentToken(server string, twfId string) (string, error) {
 		return "", errors.New("ECAgent Request invalid: no response")
 	}
 
-	log.Printf("[AGENT] ✓ Token acquired")
+	LogSuccess("[AGENT]", "✓ Token acquired")
 
 	return hex.EncodeToString(conn.HandshakeState.ServerHello.SessionId)[:31] + "\x00", nil
 }

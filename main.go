@@ -4,7 +4,6 @@ import (
 	"EasierConnect/core"
 	"flag"
 	"fmt"
-	"log"
 	"runtime"
 	"time"
 
@@ -23,10 +22,17 @@ func main() {
 	flag.IntVar(&port, "port", 443, "EasyConnect port address (e.g. 443)")
 	debugDump := false
 	flag.BoolVar(&debugDump, "debug-dump", false, "Enable traffic debug dump (only for debug usage)")
+	noColor := false
+	flag.BoolVar(&noColor, "no-color", false, "Disable colored output")
 	flag.Parse()
 
+	if noColor {
+		core.DisableColor()
+	}
+
 	if host == "" || ((username == "" || password == "") && twfId == "") {
-		log.Fatal("Missing required cli args, refer to `EasierConnect --help`.")
+		core.LogError("Missing required cli args, refer to `EasierConnect --help`.")
+		return
 	}
 	server := fmt.Sprintf("%s:%d", host, port)
 
@@ -58,7 +64,7 @@ func main() {
 				if err != nil {
 					panic(err)
 				}
-				log.Printf("[LOGIN] Generated TOTP code: %s", TOTPCode)
+				core.Log("[LOGIN]", "Generated TOTP code: %s", TOTPCode)
 			}
 
 			ip, err = client.AuthTOTP(TOTPCode)
@@ -66,9 +72,10 @@ func main() {
 	}
 
 	if err != nil {
-		log.Fatal(err.Error())
+		core.LogError(err.Error())
+		return
 	}
-	log.Printf("[VPN] ✓ Assigned IP: %d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3])
+	core.LogSuccess("[VPN]", "✓ Assigned IP: %d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3])
 
 	client.ServeSocks5(socksBind, debugDump)
 

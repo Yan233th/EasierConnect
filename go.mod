@@ -29,6 +29,7 @@ require (
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/goki/freetype v0.0.0-20220119013949-7a161fd3728c // indirect
 	github.com/google/btree v1.0.1 // indirect
+	github.com/gookit/color v1.6.0 // indirect
 	github.com/gopherjs/gopherjs v1.17.2 // indirect
 	github.com/jsummers/gobmp v0.0.0-20151104160322-e2ba15ffa76e // indirect
 	github.com/klauspost/compress v1.15.12 // indirect
@@ -37,12 +38,13 @@ require (
 	github.com/srwiley/rasterx v0.0.0-20210519020934-456a8d69b780 // indirect
 	github.com/stretchr/testify v1.8.0 // indirect
 	github.com/tevino/abool v1.2.0 // indirect
+	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	github.com/yuin/goldmark v1.4.1 // indirect
 	golang.org/x/crypto v0.1.0 // indirect
 	golang.org/x/image v0.0.0-20220601225756-64ec528b34cd // indirect
 	golang.org/x/mobile v0.0.0-20211207041440-4e6c2922fdee // indirect
 	golang.org/x/net v0.1.0 // indirect
-	golang.org/x/sys v0.3.1-0.20221220025402-2204b6615fb8 // indirect
+	golang.org/x/sys v0.30.0 // indirect
 	golang.org/x/text v0.4.0 // indirect
 	golang.org/x/time v0.0.0-20211116232009-f0f3c7e86c11 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect

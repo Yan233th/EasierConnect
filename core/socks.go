@@ -3,7 +3,6 @@ package core
 import (
 	"context"
 	"errors"
-	"log"
 	"net"
 	"strconv"
 	"strings"
@@ -54,7 +53,7 @@ func ServeSocks5(ipStack *stack.Stack, selfIp []byte, bindAddr string) {
 		panic("socks listen failed: " + err.Error())
 	}
 
-	log.Printf("[SOCKS5] Server listening on %s", bindAddr)
+	Log("[SOCKS5]", "Server listening on %s", bindAddr)
 
 	err = server.Serve(listener)
 	panic(err)
