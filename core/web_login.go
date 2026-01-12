@@ -245,6 +245,9 @@ func TOTPAuth(server string, username string, password string, twfId string, TOT
 
 func ECAgentToken(server string, twfId string) (string, error) {
 	dialConn, err := net.Dial("tcp", server)
+	if err != nil {
+		return "", err
+	}
 	defer dialConn.Close()
 	conn := utls.UClient(dialConn, &utls.Config{InsecureSkipVerify: true}, utls.HelloGolang)
 	defer conn.Close()
